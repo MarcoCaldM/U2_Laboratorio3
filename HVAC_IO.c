@@ -188,7 +188,7 @@ void INT_UP_DOWN(void)
 * Function Name    : HVAC_ActualizarEntradas
 * Returned Value   : None.
 * Comments         :
-*    Actualiza los variables indicadores de las entradas sobre las cuales surgir�n
+*    Actualiza los variables indicadores de las entradas sobre las cuales surgiran
 *    las salidas.
 *
 *END***********************************************************************************/
@@ -212,138 +212,13 @@ void HVAC_ActualizarEntradas(void)
 
 /*FUNCTION******************************************************************************
 *
-* Function Name    : HVAC_ActualizarSalidas
-* Returned Value   : None.
-* Comments         :
-*    Decide a partir de las entradas actualizadas las salidas principales,
-*    y en ciertos casos, en base a una cuesti�n de temperatura, la salida del 'fan'.
-*
-*END***********************************************************************************/
-/*void HVAC_ActualizarSalidas(void)
-{
-    // Cambia el valor de las salidas de acuerdo a entradas.
-
-    if(EstadoEntradas.FanState == On)
-    {
-        FAN_LED_State = 1;
-        GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  1);
-        GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 0);
-        GPIO_setOutput(COOL_LED_PORT, COOL_LED, 0);
-    }
-
-    else if(EstadoEntradas.FanState == Auto)
-    {
-        switch(EstadoEntradas.SystemState)
-        {
-        case Off:   GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  0);
-                    GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 0);
-                    GPIO_setOutput(COOL_LED_PORT, COOL_LED, 0);
-                    FAN_LED_State = 0;
-                    break;
-        case Heat:  HVAC_Heat(); break;
-        case Cool:  HVAC_Cool(); break;
-        }
-    }
-}*/
-
-/*FUNCTION******************************************************************************
-*
-* Function Name    : HVAC_Heat
-* Returned Value   : None.
-* Comments         :
-*    Decide a partir de la temperatura actual y la deseada, si se debe activar el fan.
-*    (La temperatura deseada debe ser mayor a la actual). El estado del fan debe estar
-*    en 'auto' y este modo debe estar activado para entrar a la funci�n.
-*
-*END***********************************************************************************/
-/*void HVAC_Heat(void)
-{
-    GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 1);
-    GPIO_setOutput(COOL_LED_PORT, COOL_LED, 0);
-
-    if(TemperaturaActual < SetPoint)                    // El fan se debe encender si se quiere una temp. m�s alta.
-    {
-        GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  1);
-        FAN_LED_State = 1;
-    }
-    else
-    {
-        GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  0);
-        FAN_LED_State = 0;
-    }
-}*/
-
-/*FUNCTION******************************************************************************
-*
-* Function Name    : HVAC_Cool
-* Returned Value   : None.
-* Comments         :
-*    Decide a partir de la temperatura actual y la deseada, si se debe activar el fan.
-*    (La temperatura deseada debe ser menor a la actual). El estado del fan debe estar
-*    en 'auto' y este modo debe estar activado para entrar a la funci�n.
-*
-*END***********************************************************************************/
-/*void HVAC_Cool(void)
-{
-    TemperaturaActual = ADC_GetTemperature(TEMP_CH);
-    GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 0);
-    GPIO_setOutput(COOL_LED_PORT, COOL_LED, 1);
-
-    if(TemperaturaActual > SetPoint)                    // El fan se debe encender si se quiere una temp. m�s baja.
-    {
-        GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  1);
-        FAN_LED_State = 1;
-    }
-    else
-    {
-        GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  0);
-        FAN_LED_State = 0;
-    }
-
-}*/
-
-/*FUNCTION******************************************************************************
-*
-* Function Name    : HVAC_Heartbeat
-* Returned Value   : None.
-* Comments         :
-*    Funci�n que prende y apaga una salida para notificar que el sistema est� activo.
-*    El periodo en que se hace esto depende de una entrada del ADC en esta funci�n.
-*
-*END***********************************************************************************/
-/*void HVAC_Heartbeat(void)
-{
-    static int delay_en_curso = 0;
-
-    ADC_trigger();
-    while(ADC_is_busy());
-
-    delay = 15000 + (100 * ADC_result(HEARTBEAT_CH) / 4);                // Lectura del ADC por medio de la funci�n.
-
-    delay_en_curso -= DELAY;
-   if(delay_en_curso <= 0)
-   {
-       delay_en_curso = delay;
-       toggle ^= 1;
-   }
-
-   GPIO_setOutput(HB_LED_PORT, HBeatLED, toggle);
-
-   if(delay_en_curso < DELAY)
-       usleep(delay_en_curso);
-   else
-       usleep(DELAY);
-}*/
-
-/*FUNCTION******************************************************************************
-*
 * Function Name    : HVAC_PrintState
 * Returned Value   : None.
 * Comments         :
 *    Imprime via UART la situacion actual del sistema en terminos de luminicencia
-*    actual y deseada.
-*    Imprime cada cierto n�mero de iteraciones y justo despues de recibir un cambio
-*    en las entradas, produci�ndose un inicio en las iteraciones.
+*    actual y el estado de las persianas.
+*    Imprime cada cierto numero de iteraciones y justo despues de recibir un cambio
+*    en las entradas, produciendose un inicio en las iteraciones.
 *END***********************************************************************************/
 void HVAC_PrintState(void)
 {
@@ -362,7 +237,19 @@ void HVAC_PrintState(void)
         UART_putsf(MAIN_UART,state);
 
         iterations = 0;
+
+        if(SecuenciaLED.Estado == Up){      //Si se activa la secuencia...
+            toggle ^= 1;                    //Intercambia entre LED Rojo y Azul
+            GPIO_setOutput(LED_RGB_PORT, LED_Rojo, toggle);
+            GPIO_setOutput(LED_RGB_PORT, LED_Azul, !toggle);
+        }
+        else{                               //Si no se activa o se desactiva permanece apagado
+            GPIO_setOutput(LED_RGB_PORT, LED_Rojo, 0);
+            GPIO_setOutput(LED_RGB_PORT, LED_Azul, 0);
+        }
     }
+
+    usleep(DELAY);
 }
 
 /*FUNCTION******************************************************************************

@@ -115,15 +115,11 @@ struct EstadoEntradas
 #define LUM3    CH10
 
 // Re-definici�n de los bits y puertos de salida a utilizar.
-#define FAN_LED     BSP_LED1
-#define HEAT_LED    BSP_LED2
-#define HBeatLED    BSP_LED3
-#define COOL_LED    BSP_LED4
+#define LED_Rojo    BSP_LED2
+#define LED_Verde   BSP_LED3
+#define LED_Azul    BSP_LED4
 
-#define FAN_LED_PORT    BSP_LED1_PORT
-#define HEAT_LED_PORT   BSP_LED2_PORT
-#define HB_LED_PORT     BSP_LED3_PORT
-#define COOL_LED_PORT   BSP_LED4_PORT
+#define LED_RGB_PORT    BSP_LED3_PORT
 
 // Definiciones del estado 'normal' de los botones externos a la tarjeta (solo hay dos botones).
 #define GND 0
@@ -160,15 +156,9 @@ extern void System_InicialiceTIMER (void); // ESTO LO A�ADI PARA UTILIZAR EL "
 
 /* Funciones principales. */
 extern void HVAC_ActualizarEntradas(void);
-extern void HVAC_ActualizarSalidas(void);
-extern void HVAC_Heartbeat(void);
 extern void HVAC_PrintState(void);
 
 extern void HVAC_Enc_Apg_Check(void);
-
-// Funciones para los estados Heat y Cool.
-extern void HVAC_Heat(void);
-extern void HVAC_Cool(void);
 
 // Funciones para controlar el sistema.
 extern void HVAC_Enc_Apg_Ctrl(void);

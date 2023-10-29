@@ -41,8 +41,14 @@ void *HVAC_Thread(void *arg0)
     {
         contadorApg = 0;        //Reinicia el contador del apagado
         Select_Menu = 0;        //Reinicia la seleccion del menu
+
+        GPIO_setOutput(LED_RGB_PORT, LED_Rojo, 0);  //Apaga el LED RGB
+        GPIO_setOutput(LED_RGB_PORT, LED_Verde, 0);
+        GPIO_setOutput(LED_RGB_PORT, LED_Azul, 0);
+
         while(Enc_Apg == ENCENDIDO){
             HVAC_ActualizarEntradas();
+            HVAC_Enc_Apg_Check();
             HVAC_PrintState();
         }
     }
