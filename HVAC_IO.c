@@ -198,15 +198,15 @@ void HVAC_ActualizarEntradas(void)
     //Se usa la formula Vmax/2^n donde se multiplica por 10
     ADC_trigger();
     while(ADC_is_busy());
-    lum[1] = (ADC_result(LUM1) * 10) / MAX_ADC_VALUE;
+    lum[0] = (ADC_result(LUM1) * 10) / MAX_ADC_VALUE;
 
     ADC_trigger();
     while(ADC_is_busy());
-    lum[2] = (ADC_result(LUM2) * 10) / MAX_ADC_VALUE;
+    lum[1] = (ADC_result(LUM2) * 10) / MAX_ADC_VALUE;
 
     ADC_trigger();
     while(ADC_is_busy());
-    lum[3] = (ADC_result(LUM3) * 10) / MAX_ADC_VALUE;
+    lum[2] = (ADC_result(LUM3) * 10) / MAX_ADC_VALUE;
 
 }
 
@@ -340,8 +340,8 @@ void HVAC_ActualizarEntradas(void)
 * Function Name    : HVAC_PrintState
 * Returned Value   : None.
 * Comments         :
-*    Imprime via UART la situaci�n actual del sistema en t�rminos de temperaturas
-*    actual y deseada, estado del abanico, del sistema y estado de las entradas.
+*    Imprime via UART la situacion actual del sistema en terminos de luminicencia
+*    actual y deseada.
 *    Imprime cada cierto n�mero de iteraciones y justo despues de recibir un cambio
 *    en las entradas, produci�ndose un inicio en las iteraciones.
 *END***********************************************************************************/
@@ -352,10 +352,7 @@ void HVAC_PrintState(void)
 
     if(iterations >= ITERATIONS_TO_PRINT)
     {
-        sprintf(state,"LUM_1: %0.2fC, LUM_2: %0.2fF  LUM_3: %s\n\r",
-                    TemperaturaActual,
-                    ((TemperaturaActual*9.0/5.0) + 32),
-                    FAN_LED_State?"On":"Off");
+        sprintf(state,"LUZ_1: %0.2f, LUZ_2: %0.2f  LUZ_3: %0.2f \n\r",lum[0], lum[1], lum[2]);
         UART_putsf(MAIN_UART,state);
 
         sprintf(state,"Persiana 1: %s, Persiana 2: %s, Secuencia LEDs: %s\n\r\n\r",
