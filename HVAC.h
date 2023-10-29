@@ -109,6 +109,11 @@ struct EstadoEntradas
 #define HEARTBEAT_CH    CH1
 #define POT_PIN         AN1
 
+//Canales para los potenciometros
+#define LUM1    CH8
+#define LUM2    CH9
+#define LUM3    CH10
+
 // Re-definici�n de los bits y puertos de salida a utilizar.
 #define FAN_LED     BSP_LED1
 #define HEAT_LED    BSP_LED2

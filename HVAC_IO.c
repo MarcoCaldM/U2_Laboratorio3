@@ -32,7 +32,7 @@ const char* SysSTR[] = {"Cool","Off","Heat","Only Fan"};    // Control de los es
 extern void Timer32_INT1 (void); // Funci�n de interrupci�n.
 extern void Delay_ms (uint32_t time); // Funci�n de delay.
 uint32_t tiempo = 2000;
-
+float lum[3];
 /*FUNCTION******************************************************************************
 *
 * Function Name    : System_InicialiceTIMER
@@ -63,8 +63,11 @@ void HVAC_InicialiceADC(void)
     ADC_Initialize(ADC_14bitResolution, ADC_CLKDiv8);
     ADC_SetConvertionMode(ADC_SequenceOfChannels);
     ADC_EnableTemperatureSensor(TEMP_CH);                          // Se configura el sensor en el canal 0.
-    ADC_ConfigurePinChannel(HEARTBEAT_CH, POT_PIN, ADC_VCC_VSS);   // Pin AN1 para potenci�metro.
-    ADC_SetEndOfSequenceChannel(HEARTBEAT_CH);                     // Termina en el AN1, canal �ltimo.
+    ADC_ConfigurePinChannel(LUM1, AN8, ADC_VCC_VSS); /*pin 4.5. se enlaza el canal a la entrada analoga de la tarjeta para realizar la lectura*/
+    ADC_ConfigurePinChannel(LUM2, AN9, ADC_VCC_VSS); /*pin 4.4.*/
+    ADC_ConfigurePinChannel(LUM3, AN10, ADC_VCC_VSS); /*Pin 4.3*/
+    ADC_SetStartOfSequenceChannel(AN8); /*Empieza la secuencia de lectura en el analogo 8*/
+    ADC_SetEndOfSequenceChannel(AN10); /*Termina la secuencia de lectura en el analogo 10*/
 }
 
 /*FUNCTION******************************************************************************
@@ -191,58 +194,20 @@ void INT_UP_DOWN(void)
 *END***********************************************************************************/
 void HVAC_ActualizarEntradas(void)
 {
-    /*static bool ultimos_estados[] = {FALSE, FALSE, FALSE, FALSE, FALSE};
+    //Lectura de los potenciometros, va del 0 a 10 luxes
+    //Se usa la formula Vmax/2^n donde se multiplica por 10
+    ADC_trigger();
+    while(ADC_is_busy());
+    lum[1] = (ADC_result(LUM1) * 10) / MAX_ADC_VALUE;
 
-    TemperaturaActual = ADC_GetTemperature(TEMP_CH);                                // Averigua temperatura actual.
+    ADC_trigger();
+    while(ADC_is_busy());
+    lum[2] = (ADC_result(LUM2) * 10) / MAX_ADC_VALUE;
 
-    if(GPIO_getInputPinValue(FAN_PORT,BIT(FAN_ON)) != NORMAL_STATE_EXTRA_BUTTONS)   // Observa entradas.
-    {
-        EstadoEntradas.FanState = On;
-        EstadoEntradas.SystemState = FanOnly;
+    ADC_trigger();
+    while(ADC_is_busy());
+    lum[3] = (ADC_result(LUM3) * 10) / MAX_ADC_VALUE;
 
-        if(ultimos_estados[0] == FALSE)
-            event = TRUE;
-
-        ultimos_estados[0] = TRUE;
-        ultimos_estados[1] = FALSE;
-    }
-
-    else if(GPIO_getInputPinValue(FAN_PORT,BIT(FAN_AUTO)) != NORMAL_STATE_EXTRA_BUTTONS)    // No hay default para
-    {                                                                                       // cuando no se detecta
-        EstadoEntradas.FanState = Auto;                                                     // ninguna entrada activa.
-        if(ultimos_estados[1] == FALSE)
-            event = TRUE;
-
-        ultimos_estados[1] = TRUE;
-        ultimos_estados[0] = FALSE;
-
-
-        if(GPIO_getInputPinValue(SYSTEM_PORT,BIT(SYSTEM_OFF)))                         // Sistema apagado.
-        {
-            EstadoEntradas.SystemState = Off;
-            if(ultimos_estados[3] == FALSE)
-                event = TRUE;
-            ultimos_estados[2] = FALSE;
-            ultimos_estados[3] = TRUE;
-            ultimos_estados[4] = FALSE;
-        }
-        else if(GPIO_getInputPinValue(SYSTEM_PORT,BIT(SYSTEM_HEAT)))                        // Sistema en HEAT.
-        {
-            EstadoEntradas.SystemState = Heat;
-            if(ultimos_estados[4] == FALSE)
-                event = TRUE;
-            ultimos_estados[2] = FALSE;
-            ultimos_estados[3] = FALSE;
-            ultimos_estados[4] = TRUE;
-        }
-        else
-        {
-            EstadoEntradas.SystemState = Off;
-            ultimos_estados[2] = FALSE;
-            ultimos_estados[3] = FALSE;
-            ultimos_estados[4] = FALSE;
-        }
-    }*/
 }
 
 /*FUNCTION******************************************************************************
@@ -254,7 +219,7 @@ void HVAC_ActualizarEntradas(void)
 *    y en ciertos casos, en base a una cuesti�n de temperatura, la salida del 'fan'.
 *
 *END***********************************************************************************/
-void HVAC_ActualizarSalidas(void)
+/*void HVAC_ActualizarSalidas(void)
 {
     // Cambia el valor de las salidas de acuerdo a entradas.
 
@@ -279,7 +244,7 @@ void HVAC_ActualizarSalidas(void)
         case Cool:  HVAC_Cool(); break;
         }
     }
-}
+}*/
 
 /*FUNCTION******************************************************************************
 *
@@ -291,7 +256,7 @@ void HVAC_ActualizarSalidas(void)
 *    en 'auto' y este modo debe estar activado para entrar a la funci�n.
 *
 *END***********************************************************************************/
-void HVAC_Heat(void)
+/*void HVAC_Heat(void)
 {
     GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 1);
     GPIO_setOutput(COOL_LED_PORT, COOL_LED, 0);
@@ -306,7 +271,7 @@ void HVAC_Heat(void)
         GPIO_setOutput(FAN_LED_PORT,  FAN_LED,  0);
         FAN_LED_State = 0;
     }
-}
+}*/
 
 /*FUNCTION******************************************************************************
 *
@@ -318,7 +283,7 @@ void HVAC_Heat(void)
 *    en 'auto' y este modo debe estar activado para entrar a la funci�n.
 *
 *END***********************************************************************************/
-void HVAC_Cool(void)
+/*void HVAC_Cool(void)
 {
     TemperaturaActual = ADC_GetTemperature(TEMP_CH);
     GPIO_setOutput(HEAT_LED_PORT, HEAT_LED, 0);
@@ -335,7 +300,7 @@ void HVAC_Cool(void)
         FAN_LED_State = 0;
     }
 
-}
+}*/
 
 /*FUNCTION******************************************************************************
 *
@@ -346,7 +311,7 @@ void HVAC_Cool(void)
 *    El periodo en que se hace esto depende de una entrada del ADC en esta funci�n.
 *
 *END***********************************************************************************/
-void HVAC_Heartbeat(void)
+/*void HVAC_Heartbeat(void)
 {
     static int delay_en_curso = 0;
 
@@ -368,7 +333,7 @@ void HVAC_Heartbeat(void)
        usleep(delay_en_curso);
    else
        usleep(DELAY);
-}
+}*/
 
 /*FUNCTION******************************************************************************
 *

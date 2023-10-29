@@ -43,10 +43,7 @@ void *HVAC_Thread(void *arg0)
         Select_Menu = 0;        //Reinicia la seleccion del menu
         while(Enc_Apg == ENCENDIDO){
             HVAC_ActualizarEntradas();
-            HVAC_ActualizarSalidas();
-            HVAC_Enc_Apg_Check();
             HVAC_PrintState();
-            HVAC_Heartbeat();
         }
     }
 }
