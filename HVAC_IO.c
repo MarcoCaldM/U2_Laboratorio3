@@ -4,9 +4,7 @@
  // Board:           MSP432P401R
  // Program version: CCS V8.3 TI
  // Company:         Texas Instruments
- // Description:     Funciones de control de HW a trav�s de estados.
- // Authors:         Jos� Luis Chac�n M. y Jes�s Alejandro Navarro Acosta.
- // Updated:         11/2018
+ // Description:     Funciones de control a traves de estados.
 
 #include "HVAC.h"
 
@@ -20,8 +18,15 @@ bool toggle = 0;               // Toggle para el heartbeat.
 uint32_t delay;                // Delay aplicado al heartbeat.
 bool event = FALSE;            // Evento I/O que fuerza impresi�n inmediata.
 
+// Variables de estado de los botones principales
+bool Enc_Apg_push = FALSE;     // Pulsacion del botón ON/OFF
+bool Menu_Push = FALSE;        // Pulsacion del boton Menu
+bool UP_DOWN_Push = FALSE;     // Pulsacion del boton UP/DOWN
+
 bool FAN_LED_State = 0;                                     // Estado led_FAN.
 const char* SysSTR[] = {"Cool","Off","Heat","Only Fan"};    // Control de los estados.
+
+
 
 /* **** SE DECLARARON LAS VARIABLES Y FUNCIONES PARA REALIZAR EL DALAY CON EL TIMER ******** */
 extern void Timer32_INT1 (void); // Funci�n de interrupci�n.
@@ -32,8 +37,7 @@ uint32_t tiempo = 2000;
 *
 * Function Name    : System_InicialiceTIMER
 * Returned Value   : None.
-* Comments         :
-*    Controla los preparativos para poder usar TIMER32
+* Comments         : Controla los preparativos para poder usar TIMER32
 *
 *END***********************************************************************************/
 void System_InicialiceTIMER (void)
@@ -41,69 +45,6 @@ void System_InicialiceTIMER (void)
     T32_Init1();
     Int_registerInterrupt(INT_T32_INT1, Timer32_INT1);
     Int_enableInterrupt(INT_T32_INT1);
-}
-
-
-
-/*******************************************************************************************/
-
-/**********************************************************************************
- * Function: INT_SWI
- * Preconditions: Interrupci�n habilitada, registrada e inicializaci�n de m�dulos.
- * Overview: Funci�n que es llamada cuando se genera
- *           la interrupci�n del bot�n SW1 o SW2.
- * Input: None.
- * Output: None.
- **********************************************************************************/
-void INT_SWI(void)
-{
-    GPIO_clear_interrupt_flag(P1,B1); // Limpia la bandera de la interrupci�n.
-    GPIO_clear_interrupt_flag(P1,B4); // Limpia la bandera de la interrupci�n.
-
-    if(!GPIO_getInputPinValue(SETPOINT_PORT,BIT(ON_OFF)))        // Si se pulsa el botón de encendido y apagado.
-        HVAC_Enc_Apg();
-    else if(!GPIO_getInputPinValue(SETPOINT_PORT,BIT(SP_DOWN))) // Si se trata del bot�n para disminuir setpoint (SW2).
-        HVAC_SetPointDown();
-
-    return;
-}
-
-/*FUNCTION******************************************************************************
-*
-* Function Name    : HVAC_InicialiceIO
-* Returned Value   : None.
-* Comments         :
-*    Controla los preparativos para poder usar las entradas y salidas GPIO.
-*
-*END***********************************************************************************/
-void HVAC_InicialiceIO(void)
-{
-    // Para entradas y salidas ya definidas en la tarjeta.
-    GPIO_init_board();
-
-    // Modo de interrupci�n de los botones principales.
-    GPIO_interruptEdgeSelect(SETPOINT_PORT,BIT(ON_OFF),  GPIO_HIGH_TO_LOW_TRANSITION);
-    GPIO_interruptEdgeSelect(SETPOINT_PORT,BIT(SP_DOWN), GPIO_HIGH_TO_LOW_TRANSITION);
-
-    // Preparativos de interrupci�n.
-    GPIO_clear_interrupt_flag(P1,B1);
-    GPIO_clear_interrupt_flag(P1,B4);
-    GPIO_enable_bit_interrupt(P1,B1);
-    GPIO_enable_bit_interrupt(P1,B4);
-
-    // Se necesitan m�s entradas, se usar�n las siguientes:
-    GPIO_setBitIO(FAN_PORT, FAN_ON, ENTRADA);
-    GPIO_setBitIO(FAN_PORT, FAN_AUTO, ENTRADA);
-    GPIO_setBitIO(SYSTEM_PORT, SYSTEM_COOL, ENTRADA);
-    GPIO_setBitIO(SYSTEM_PORT, SYSTEM_OFF, ENTRADA);
-    GPIO_setBitIO(SYSTEM_PORT, SYSTEM_HEAT, ENTRADA);
-    GPIO_setBitIO(SETPOINT_PORT, ON_OFF, ENTRADA);
-    GPIO_setBitIO(SETPOINT_PORT, SP_DOWN, ENTRADA);
-
-    /* Uso del m�dulo Interrupt para generar la interrupci�n general y registro de esta en una funci�n
-    *  que se llame cuando la interrupci�n se active.                                                   */
-    Int_registerInterrupt(INT_PORT1, INT_SWI);
-    Int_enableInterrupt(INT_PORT1);
 }
 
 /*FUNCTION******************************************************************************
@@ -142,6 +83,105 @@ void HVAC_InicialiceUART (void)
 
 /*FUNCTION******************************************************************************
 *
+* Function Name    : HVAC_InicialiceIO
+* Returned Value   : None.
+* Comments         :
+*    Controla los preparativos para poder usar las entradas y salidas GPIO.
+*
+*END***********************************************************************************/
+void HVAC_InicialiceIO(void)
+{
+    // Para entradas y salidas ya definidas en la tarjeta.
+    GPIO_init_board();
+
+    // Modo de interrupcion de los botones principales.
+    GPIO_interruptEdgeSelect(ON_OFF_PORT,BIT(ON_OFF),  GPIO_HIGH_TO_LOW_TRANSITION);
+    GPIO_interruptEdgeSelect(MENU_PORT,BIT(MENU_BTN), GPIO_HIGH_TO_LOW_TRANSITION);
+    GPIO_interruptEdgeSelect(UP_DOWN_PORT,BIT(UP_BTN), GPIO_LOW_TO_HIGH_TRANSITION);
+    GPIO_interruptEdgeSelect(UP_DOWN_PORT,BIT(DOWN_BTN), GPIO_LOW_TO_HIGH_TRANSITION);
+
+    // Preparativos de interrupcion.
+    GPIO_clear_interrupt_flag(P1,B1);
+    GPIO_clear_interrupt_flag(P1,B4);
+    GPIO_clear_interrupt_flag(P2,B4);
+    GPIO_clear_interrupt_flag(P2,B5);
+
+    GPIO_enable_bit_interrupt(P1,B1);
+    GPIO_enable_bit_interrupt(P1,B4);
+    GPIO_enable_bit_interrupt(P2,B4);
+    GPIO_enable_bit_interrupt(P2,B5);
+
+
+    /* Uso del modulo Interrupt para generar la interrupcion general y registro de esta en una funcion
+    *  que se llame cuando la interrupcion se active. */
+    Int_registerInterrupt(INT_PORT1, INT_SWI);
+    Int_registerInterrupt(INT_PORT2, INT_UP_DOWN);
+    Int_enableInterrupt(INT_PORT1);
+    Int_enableInterrupt(INT_PORT2);
+}
+
+/*******************************************************************************************/
+
+/**********************************************************************************
+ * Function: INT_SWI
+ * Preconditions: Interrupcion habilitada, registrada e inicializacion de modulos.
+ * Overview: Funcion que es llamada cuando se genera
+ *           la interrupcion del boton ON/OFF o menu.
+ * Input: None.
+ * Output: None.
+ **********************************************************************************/
+void INT_SWI(void)
+{
+    GPIO_clear_interrupt_flag(P1,B1); // Limpia la bandera de la interrupci�n.
+    GPIO_clear_interrupt_flag(P1,B4); // Limpia la bandera de la interrupci�n.
+
+    if(!GPIO_getInputPinValue(ON_OFF_PORT,BIT(ON_OFF)))     // Si se pulsa el botón de encendido y apagado.
+        HVAC_Enc_Apg_Ctrl();
+    if(!GPIO_getInputPinValue(MENU_PORT,BIT(MENU_BTN))){    // Si se pulsa el botón de menu.
+        Select_Menu += 0x01;        // Cambia la seleccion
+        if(Select_Menu > 0x03)      // Reinicia la seleccion cuando se pasa de 3
+            Select_Menu = 0x01;
+        while(!GPIO_getInputPinValue(MENU_PORT,BIT(MENU_BTN))); //Para evitar el rebote
+        HVAC_Menu();                // Imprime el menu
+    }
+    return;
+}
+
+/**********************************************************************************
+ * Function: INT_UP_DOWN
+ * Preconditions: Interrupcion habilitada, registrada e inicializacion de modulos.
+ * Overview: Funcion que es llamada cuando se genera la interrupcion del
+ *           boton UP/DOWN.
+ *
+ **********************************************************************************/
+void INT_UP_DOWN(void)
+{
+    GPIO_clear_interrupt_flag(P2,B4); // Limpia la bandera de la interrupci�n.
+    GPIO_clear_interrupt_flag(P2,B5); // Limpia la bandera de la interrupci�n.
+    if(Enc_Apg != APAGADO){     //No imprime si el sistema está apagado
+        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(UP_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){     // Si se pulsa el botón UP
+            switch(Select_Menu){
+                case P1_SELECTED:  Persiana1.Estado = Up; break;
+                case P2_SELECTED:  Persiana2.Estado = Up; break;
+                case SL_SELECTED:  SecuenciaLED.Estado = Up; break;
+                case DEFAULT: UART_putsf(MAIN_UART,"\n\r Selecciona una opcion con el boton MENU \n\r");
+            }
+        }
+        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(DOWN_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){    // Si se pulsa el boton DOWN
+            switch(Select_Menu){
+                case P1_SELECTED:  Persiana1.Estado = Down; break;
+                case P2_SELECTED:  Persiana2.Estado = Down; break;
+                case SL_SELECTED:  SecuenciaLED.Estado = Down; break;
+                case DEFAULT: UART_putsf(MAIN_UART,"\n\r Selecciona una opcion con el boton MENU \n\r");
+            }
+        }
+        UP_DOWN_Push = TRUE;
+    }
+    return;
+}
+
+/*FUNCTION******************************************************************************
+*
 * Function Name    : HVAC_ActualizarEntradas
 * Returned Value   : None.
 * Comments         :
@@ -151,7 +191,7 @@ void HVAC_InicialiceUART (void)
 *END***********************************************************************************/
 void HVAC_ActualizarEntradas(void)
 {
-    static bool ultimos_estados[] = {FALSE, FALSE, FALSE, FALSE, FALSE};
+    /*static bool ultimos_estados[] = {FALSE, FALSE, FALSE, FALSE, FALSE};
 
     TemperaturaActual = ADC_GetTemperature(TEMP_CH);                                // Averigua temperatura actual.
 
@@ -176,16 +216,8 @@ void HVAC_ActualizarEntradas(void)
         ultimos_estados[1] = TRUE;
         ultimos_estados[0] = FALSE;
 
-        if(GPIO_getInputPinValue(SYSTEM_PORT,BIT(SYSTEM_COOL)))                             // Sistema en COOL.
-        {
-            EstadoEntradas.SystemState = Cool;
-            if(ultimos_estados[2] == FALSE)
-                event = TRUE;
-            ultimos_estados[2] = TRUE;
-            ultimos_estados[3] = FALSE;
-            ultimos_estados[4] = FALSE;
-        }
-        else if(GPIO_getInputPinValue(SYSTEM_PORT,BIT(SYSTEM_OFF)))                         // Sistema apagado.
+
+        if(GPIO_getInputPinValue(SYSTEM_PORT,BIT(SYSTEM_OFF)))                         // Sistema apagado.
         {
             EstadoEntradas.SystemState = Off;
             if(ultimos_estados[3] == FALSE)
@@ -209,10 +241,9 @@ void HVAC_ActualizarEntradas(void)
             ultimos_estados[2] = FALSE;
             ultimos_estados[3] = FALSE;
             ultimos_estados[4] = FALSE;
-        }                                                           // Este es solo un default en el caso de que
-    }                                                               // el sistema no encuentre ningun estado de los 3
-}                                                                   // activo (deberia ser un error debido a que debe
-                                                                    // haber solo un bot�n activado siempre).
+        }
+    }*/
+}
 
 /*FUNCTION******************************************************************************
 *
@@ -352,46 +383,64 @@ void HVAC_Heartbeat(void)
 void HVAC_PrintState(void)
 {
     static char iterations = 0;
-
     iterations++;
-    if(iterations >= ITERATIONS_TO_PRINT || event == TRUE)
+
+    if(iterations >= ITERATIONS_TO_PRINT)
     {
-       if (event == TRUE)
-       {
-           if(contadorApg == 0x00)      //Si se pulsó el botón para encender...
-               Delay_ms(1000);      //Espera un segundo
-           if(contadorApg > 0x00)       //Si se pulsó el botón para apagar...
-               Delay_ms(5000);      //Espera 5 segundos
-       }
-        iterations = 0;
-        event = FALSE;
-
-        sprintf(state,"Fan: %s, System: %s, SetPoint: %0.2f\n\r",
-                    EstadoEntradas.FanState == On? "On":"Auto",
-                    SysSTR[EstadoEntradas.SystemState],
-                    SetPoint);
-        UART_putsf(MAIN_UART,state);
-
-
-        sprintf(state,"Temperatura Actual: %0.2f�C %0.2f�F  Fan: %s\n\r\n\r",
+        sprintf(state,"LUM_1: %0.2fC, LUM_2: %0.2fF  LUM_3: %s\n\r",
                     TemperaturaActual,
                     ((TemperaturaActual*9.0/5.0) + 32),
                     FAN_LED_State?"On":"Off");
         UART_putsf(MAIN_UART,state);
 
+        sprintf(state,"Persiana 1: %s, Persiana 2: %s, Secuencia LEDs: %s\n\r\n\r",
+                    (Persiana1.Estado == Up? "UP":"DOWN"),
+                    (Persiana2.Estado == Up? "UP":"DOWN"),
+                    (SecuenciaLED.Estado == Up? "ON":"OFF"));
+        UART_putsf(MAIN_UART,state);
 
+        iterations = 0;
     }
 }
 
 /*FUNCTION******************************************************************************
 *
-* Function Name    : HVAC_Enc_Apg
+* Function Name    : HVAC_Enc_Apg_Check
+* Returned Value   : None.
+* Comments         : Verifica el estado de la pulsacion del botón ON/OFF y controla
+*                    el delay para el encendido y apagado del programa.
+*                    También controla el delay del menu
+*
+*END***********************************************************************************/
+void HVAC_Enc_Apg_Check(void)
+{
+    if (Enc_Apg_push == TRUE || Menu_Push == TRUE){ // Al pulsar el botón ON/OFF o el boton de menu...
+        if(contadorApg == 0x00)      // Si se pulsó el botón para encender...
+            Delay_ms(1000);             // Espera un segundo
+        else if(contadorApg > 0x00)  // Si se pulsó el botón para apagar...
+            Delay_ms(5000);             // Espera 5 segundos
+    }
+    else if(UP_DOWN_Push == TRUE){
+        if(Select_Menu != DEFAULT && Select_Menu != 0x03){   //Si no hay seleccion o está seleccionado SL no hay espera
+            UART_putsf(MAIN_UART,"\n\rEspere 5 segundos... ");
+            Delay_ms(4000);
+        }
+        Delay_ms(1000);
+        HVAC_Menu();
+    }
+    UP_DOWN_Push = FALSE;
+    Menu_Push = FALSE;
+    Enc_Apg_push = FALSE;
+}
+
+/*FUNCTION******************************************************************************
+*
+* Function Name    : HVAC_Enc_Apg_Ctrl
 * Returned Value   : None.
 * Comments         : Controla el encendido y apagado del programa.
 *
-*
 *END***********************************************************************************/
-void HVAC_Enc_Apg(void)
+void HVAC_Enc_Apg_Ctrl(void)
 {
     if(Enc_Apg == APAGADO){     //Si se pulsa el botón con el sistema apagado...
         Enc_Apg = ENCENDIDO;    //Se enciende el sistema
@@ -409,20 +458,32 @@ void HVAC_Enc_Apg(void)
             UART_putsf(MAIN_UART,"Para apagar vuelva a presionar el botón\n\r"); //Imprime instrucciones
         }
     }
-    event = TRUE;   //Controla los segundos de "delay" de cada estado (ON/OFF)
+    Enc_Apg_push = TRUE;   //Controla los segundos de "delay" de cada estado (ON/OFF)
 }
-
 
 /*FUNCTION******************************************************************************
 *
-* Function Name    : HVAC_SetPointDown
+* Function Name    : HVAC_Menu
 * Returned Value   : None.
-* Comments         :
-*    Baja el valor deseado (set point). Llamado por interrupci�n a causa del SW2.
+* Comments         : Imprime la seleccion actual del menu y su estado.
 *
 *END***********************************************************************************/
-void HVAC_SetPointDown(void)
-{
-    SetPoint -= 0.5;
-    event = TRUE;
+void HVAC_Menu(void){
+    if(Enc_Apg != APAGADO){     //No imprime si el sistema está apagado
+        switch(Select_Menu){
+            case P1_SELECTED:  sprintf(state, "\n\rP1_SELECTED  STATUS: %s\n\r\n\r"
+                               ,(Persiana1.Estado == Up? "UP":"DOWN"));
+                               UART_putsf(MAIN_UART, state);
+                               break;
+            case P2_SELECTED:  sprintf(state, "\n\rP2_SELECTED  STATUS: %s\n\r\n\r"
+                               ,(Persiana2.Estado == Up? "UP":"DOWN"));
+                               UART_putsf(MAIN_UART, state);
+                               break;
+            case SL_SELECTED:  sprintf(state, "\n\rSL_SELECTED  STATUS: %s\n\r\n\r"
+                               ,(SecuenciaLED.Estado == Up? "ON":"OFF"));
+                               UART_putsf(MAIN_UART, state);
+                               break;
+        }
+        Menu_Push = TRUE;
+    }
 }

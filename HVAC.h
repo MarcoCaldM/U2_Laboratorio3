@@ -38,8 +38,27 @@
 /* Board Support Package. */
 #include "Drivers/BSP.h"
 
-/* Enumeradores para la descripci�n del sistema. */
+/* Enumeradores y variable para la seleccion del menu. */
 
+enum MENU{      // Para las funciones del menu
+    DEFAULT,        // 0
+    P1_SELECTED,    // 1
+    P2_SELECTED,    // 2
+    SL_SELECTED,    // 3
+};
+
+enum UP_DOWN{   // Para el estado de las persianas y la SL
+    Down,   //0
+    Up,     //1
+};
+
+struct Estado_PSL{
+    uint8_t Estado;
+}   Persiana1,Persiana2,SecuenciaLED;
+
+uint8_t  Select_Menu;   //Estado del boton menu
+
+/* Enumeradores para la descripcion del sistema. */
 enum FAN        // Para el fan (abanico).
 {
     On,
@@ -65,17 +84,23 @@ struct EstadoEntradas
 #define SALIDA 0
 
 // Re-definici�n de los bits y puertos de entrada a utilizar.
+#define ON_OFF      B1
+#define MENU_BTN    B4
+#define UP_BTN      B4
+#define DOWN_BTN    B5
+
 #define FAN_ON      B3
 #define FAN_AUTO    B4
 #define SYSTEM_COOL B5
 #define SYSTEM_OFF  B6
 #define SYSTEM_HEAT B7
-#define ON_OFF      B1
-#define SP_DOWN     B4
+
+#define ON_OFF_PORT     1
+#define MENU_PORT       1
+#define UP_DOWN_PORT    2
 
 #define FAN_PORT        2
 #define SYSTEM_PORT     2
-#define SETPOINT_PORT   1
 #define FAN_PORTT        P2
 #define SYSTEM_PORTT     P2
 #define SETPOINT_PORTT   P1
@@ -118,8 +143,9 @@ uint32_t contadorApg;
 
 /* Funciones. */
 
-/* Funci�n de interrupci�n para botones de setpoint. */
+/* Funci�n de interrupci�n para botones de ON/OFF, menu y UP/DOWN. */
 extern void INT_SWI(void);
+extern void INT_UP_DOWN(void);
 
 /* Funciones de inicializaci�n. */
 extern void HVAC_InicialiceIO   (void);
@@ -133,12 +159,14 @@ extern void HVAC_ActualizarSalidas(void);
 extern void HVAC_Heartbeat(void);
 extern void HVAC_PrintState(void);
 
+extern void HVAC_Enc_Apg_Check(void);
+
 // Funciones para los estados Heat y Cool.
 extern void HVAC_Heat(void);
 extern void HVAC_Cool(void);
 
-// Funciones para incrementar o disminuir setpoint.
-extern void HVAC_Enc_Apg(void);
-extern void HVAC_SetPointDown(void);
+// Funciones para controlar el sistema.
+extern void HVAC_Enc_Apg_Ctrl(void);
+extern void HVAC_Menu(void);
 
 #endif

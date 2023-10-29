@@ -20,7 +20,7 @@ void Delay_ms (uint32_t time); // Funci�n de delay.
  * Function: HVAC_Thread
  * Preconditions: None.
  * Overview: Realiza la lectura de la temperatura y controla salidas actualizando
- *           a su vez entradas. Imprime estados. Tambi�n contiene el heartbeat.
+ *           a su vez entradas. Imprime estados.
  * Input:  Apuntador vac�o que puede apuntar cualquier tipo de dato.
  * Output: None.
  *
@@ -40,9 +40,11 @@ void *HVAC_Thread(void *arg0)
     while(1)
     {
         contadorApg = 0;        //Reinicia el contador del apagado
+        Select_Menu = 0;        //Reinicia la seleccion del menu
         while(Enc_Apg == ENCENDIDO){
             HVAC_ActualizarEntradas();
             HVAC_ActualizarSalidas();
+            HVAC_Enc_Apg_Check();
             HVAC_PrintState();
             HVAC_Heartbeat();
         }

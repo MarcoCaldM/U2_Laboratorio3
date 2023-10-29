@@ -4,14 +4,14 @@
  // Board:			 MSP432P401R
  // Program version: CCS V8.3 TI
  // Company:         Texas Instruments
- // Description:     Definición de funciones del módulo GPIO para entradas y salidas.
- // Authors:         José Luis Chacón M. y Jesús Alejandro Navarro Acosta.
+ // Description:     Definiciï¿½n de funciones del mï¿½dulo GPIO para entradas y salidas.
+ // Authors:         Josï¿½ Luis Chacï¿½n M. y Jesï¿½s Alejandro Navarro Acosta.
  // Updated:         11/2018
 
-#include "HVAC.h"     // Configuración del sistema.
+#include "HVAC.h"     // Configuraciï¿½n del sistema.
 
 
-/* Declaración del arreglo GPIO_PORT_TO_BASE
+/* Declaraciï¿½n del arreglo GPIO_PORT_TO_BASE
  * En el cual se encuentran las direcciones en donde comienzan
  * los registros de control para cada puerto.                   */
 static const uint32_t GPIO_PORT_TO_BASE[] =
@@ -32,7 +32,7 @@ static const uint32_t GPIO_PORT_TO_BASE[] =
 /*****************************************************************************
  * Function: GPIO_init
  * Preconditions: None.
- * Overview: Inicialización del módulo GPIO. Se configuran los pines de
+ * Overview: Inicializaciï¿½n del mï¿½dulo GPIO. Se configuran los pines de
  *          entrada y salida que corresponden a los LEDs y los switches
  *          en la tarjeta.
  * Input: None.
@@ -48,14 +48,20 @@ void GPIO_init_board(void)
     GPIO_set_output_bit(P2,B2); // LED_RGB (azul)
 
     // Para los switches de la tarjeta (2).
-    GPIO_set_input_bit(P1,B1); // SW1
-    GPIO_set_input_bit(P1,B4); // SW2
+    GPIO_set_input_bit(P1,B1); // BTN ON/OFF
+    GPIO_set_input_bit(P1,B4); // BTN Menu
+    GPIO_set_input_bit(P2,B4); // BTN UP
+    GPIO_set_input_bit(P2,B5); // BTN DOWN
 
     GPIO_enable_bit_pullup(P1,B1); // SW1
-    GPIO_enable_bit_pullup(P1,B4); // SW2
+    GPIO_enable_bit_pullup(P1,B4); // BTN ON/OFF
+    GPIO_enable_bit_pullup(P2,B4); // BTN UP
+    GPIO_enable_bit_pullup(P2,B5); // BTN DOWN
 
     GPIO_write_bit_high(P1,B1); // Force pull-up.
     GPIO_write_bit_high(P1,B4); // Force pull-up.
+    GPIO_write_bit_low(P2,B4); // Force pull-up.
+    GPIO_write_bit_low(P2,B5); // Force pull-up.
 }
 
 /**********************************NEW*****************************************
@@ -123,7 +129,7 @@ void GPIO_setOutput(uint_fast8_t selectedPort, uint_fast16_t selectedPins, bool 
 /*****************************************************************************
  * Function: GPIO_enableInterrupt
  * Preconditions: None.
- * Overview: Habilita la interrupción para un pin de un puerto en específico.
+ * Overview: Habilita la interrupciï¿½n para un pin de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins.
  * Output: None.
  *
@@ -132,14 +138,14 @@ void GPIO_enableInterrupt(uint_fast8_t selectedPort, uint_fast16_t selectedPins)
 {
     // Identifica el puerto seleccionado.
     uint32_t baseAddress = GPIO_PORT_TO_BASE[selectedPort];
-    // Modifica el bit del registro correspondiente para habilitar la interrupción.
+    // Modifica el bit del registro correspondiente para habilitar la interrupciï¿½n.
     HWREG16(baseAddress + OFS_PAIE) |= selectedPins;
 }
 
 /*****************************************************************************
  * Function: GPIO_disableInterrupt
  * Preconditions: None.
- * Overview: Deshabilita la interrupción para un pin de un puerto en específico.
+ * Overview: Deshabilita la interrupciï¿½n para un pin de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins.
  * Output: None.
  *
@@ -148,14 +154,14 @@ void GPIO_disableInterrupt(uint_fast8_t selectedPort, uint_fast16_t selectedPins
 {
     //Identifica el puerto seleccionado.
     uint32_t baseAddress = GPIO_PORT_TO_BASE[selectedPort];
-    //Modifica el bit del registro correspondiente para deshabilitar la interrupción.
+    //Modifica el bit del registro correspondiente para deshabilitar la interrupciï¿½n.
     HWREG16(baseAddress + OFS_PAIE) &= ~selectedPins;
 }
 
 /*****************************************************************************
  * Function: GPIO_clearInterruptFlag
  * Preconditions: None..
- * Overview: Limpia el bit que indica que hubo una interrupción en el bit del puerto específicado.
+ * Overview: Limpia el bit que indica que hubo una interrupciï¿½n en el bit del puerto especï¿½ficado.
  * Input:  uint_fast8_t selectedPort, uint_fast16_t selectedPins.
  * Output: None.
  *
@@ -171,7 +177,7 @@ void GPIO_clearInterruptFlag(uint_fast8_t selectedPort, uint_fast16_t selectedPi
 /*****************************************************************************
  * Function: GPIO_getInterruptStatus
  * Preconditions: GPIO_init().
- * Overview: Retorna el valor que indica el estado de la interrupción de un bit del puerto en específico.
+ * Overview: Retorna el valor que indica el estado de la interrupciï¿½n de un bit del puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins.
  * Output: None.
  *
@@ -180,14 +186,14 @@ uint_fast16_t GPIO_getInterruptStatus(uint_fast8_t selectedPort, uint_fast16_t s
 {
     // Identifica el puerto seleccionado.
     uint32_t baseAddress = GPIO_PORT_TO_BASE[selectedPort];
-    // Retorna el valor del registro que indica el estado de una interrupción.
+    // Retorna el valor del registro que indica el estado de una interrupciï¿½n.
     return HWREG16(baseAddress + OFS_PAIFG) & selectedPins;
 }
 
 /*****************************************************************************
  * Function: GPIO_interruptEdgeSelect
  * Preconditions: None.
- * Overview: Selecciona el evento en que se dará la interrupción para un bit de un puerto en específico.
+ * Overview: Selecciona el evento en que se darï¿½ la interrupciï¿½n para un bit de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins, uint_fast8_t edgeSelect.
  * Output: None.
  *
@@ -197,7 +203,7 @@ void GPIO_interruptEdgeSelect(uint_fast8_t selectedPort, uint_fast16_t selectedP
     // Identifica el puerto seleccionado.
     uint32_t baseAddress = GPIO_PORT_TO_BASE[selectedPort];
 
-    // Modifica el bit del registro correspondiente para seleccionar el flanco que provoca la interrupción.
+    // Modifica el bit del registro correspondiente para seleccionar el flanco que provoca la interrupciï¿½n.
     if (GPIO_LOW_TO_HIGH_TRANSITION == edgeSelect)
         HWREG16(baseAddress + OFS_PAIES) &= ~selectedPins;
     else
@@ -207,7 +213,7 @@ void GPIO_interruptEdgeSelect(uint_fast8_t selectedPort, uint_fast16_t selectedP
 /*****************************************************************************
  * Function: GPIO_getInputPinValue
  * Preconditions: None.
- * Overview: Retorna el valor de entrada para un bit de un puerto en específico.
+ * Overview: Retorna el valor de entrada para un bit de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins.
  * Output: None.
  *
@@ -231,7 +237,7 @@ uint8_t GPIO_getInputPinValue(uint_fast8_t selectedPort, uint_fast16_t selectedP
 /**********************************************************************************
  * Function: GPIO_setAsPeripheralModuleFunctionOutputPin
  * Preconditions: GPIO_init().
- * Overview: Especifica la función de salida de un bit de un puerto en específico.
+ * Overview: Especifica la funciï¿½n de salida de un bit de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins, uint_fast8_t mode.
  * Output: None.
  *
@@ -262,7 +268,7 @@ void GPIO_setAsPeripheralModuleFunctionOutputPin(uint_fast8_t selectedPort, uint
 /**********************************************************************************
  * Function: setAsPeripheralModuleFunctionInputPin
  * Preconditions: GPIO_init().
- * Overview: Especifica la función de entrada de un bit de un puerto en específico.
+ * Overview: Especifica la funciï¿½n de entrada de un bit de un puerto en especï¿½fico.
  * Input: uint_fast8_t selectedPort, uint_fast16_t selectedPins, uint_fast8_t mode.
  * Output: None.
  *
