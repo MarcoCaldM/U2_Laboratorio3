@@ -58,63 +58,27 @@ struct Estado_PSL{
 
 uint8_t  Select_Menu;   //Estado del boton menu
 
-/* Enumeradores para la descripcion del sistema. */
-enum FAN        // Para el fan (abanico).
-{
-    On,
-    Auto,
-};
 
-enum SYSTEM     // Para el sistema cuando FAN est� en auto (cool, off y heat, o no considerar ninguno y usar fan only).
-{
-    Cool,
-    Off,
-    Heat,
-    FanOnly,
-};
-
-struct EstadoEntradas
-{
-    uint8_t  SystemState;
-    uint8_t     FanState;
-}   EstadoEntradas;
-
-// Definiciones B�sicas.
+// Definiciones Basicas.
 #define ENTRADA 1
 #define SALIDA 0
 
-// Re-definici�n de los bits y puertos de entrada a utilizar.
+// Re-definicion de los bits y puertos de entrada a utilizar.
 #define ON_OFF      B1
 #define MENU_BTN    B4
 #define UP_BTN      B4
 #define DOWN_BTN    B5
 
-#define FAN_ON      B3
-#define FAN_AUTO    B4
-#define SYSTEM_COOL B5
-#define SYSTEM_OFF  B6
-#define SYSTEM_HEAT B7
-
 #define ON_OFF_PORT     1
 #define MENU_PORT       1
 #define UP_DOWN_PORT    2
-
-#define FAN_PORT        2
-#define SYSTEM_PORT     2
-#define FAN_PORTT        P2
-#define SYSTEM_PORTT     P2
-#define SETPOINT_PORTT   P1
-
-#define TEMP_CH         CH0
-#define HEARTBEAT_CH    CH1
-#define POT_PIN         AN1
 
 //Canales para los potenciometros
 #define LUM1    CH8
 #define LUM2    CH9
 #define LUM3    CH10
 
-// Re-definici�n de los bits y puertos de salida a utilizar.
+// Re-definicion de los bits y puertos de salida a utilizar.
 #define LED_Rojo    BSP_LED2
 #define LED_Verde   BSP_LED3
 #define LED_Azul    BSP_LED4
@@ -128,7 +92,7 @@ struct EstadoEntradas
 
 // Definiciones del sistema.
 #define MAX_MSG_SIZE 64
-#define MAX_ADC_VALUE 16383             // (2 ^14 bits) es la resoluci�n default.
+#define MAX_ADC_VALUE 16383             // (2 ^14 bits) es la resolucion default.
 #define MAIN_UART (uint32_t)(EUSCI_A0)
 #define DELAY 20000
 #define ITERATIONS_TO_PRINT 49
@@ -139,20 +103,21 @@ uint32_t contadorApg;
 #define ENCENDIDO 1
 #define APAGADO 0
 
-// Definici�n para el RTOS.
+// Definicion para el RTOS.
 #define THREADSTACKSIZE1 1500
+
 
 /* Funciones. */
 
-/* Funci�n de interrupci�n para botones de ON/OFF, menu y UP/DOWN. */
+/* Funcion de interrupcion para botones de ON/OFF, menu y UP/DOWN. */
 extern void INT_SWI(void);
 extern void INT_UP_DOWN(void);
 
-/* Funciones de inicializaci�n. */
+/* Funciones de inicializacion. */
 extern void HVAC_InicialiceIO   (void);
 extern void HVAC_InicialiceADC  (void);
 extern void HVAC_InicialiceUART (void);
-extern void System_InicialiceTIMER (void); // ESTO LO A�ADI PARA UTILIZAR EL "TIMER32"
+extern void System_InicialiceTIMER (void);
 
 /* Funciones principales. */
 extern void HVAC_ActualizarEntradas(void);

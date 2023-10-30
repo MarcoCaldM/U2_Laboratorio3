@@ -9,30 +9,22 @@
 #include "HVAC.h"
 
 /* Variables sobre las cuales se maneja el sistema. */
-float TemperaturaActual;       // Temperatura.
-float SetPoint = 25.0;         // Valor deseado.
+char state[MAX_MSG_SIZE];                       // Cadena a imprimir.
+bool toggle = 0;
 
-char state[MAX_MSG_SIZE];      // Cadena a imprimir.
-
-bool toggle = 0;               // Toggle para el heartbeat.
-uint32_t delay;                // Delay aplicado al heartbeat.
-bool event = FALSE;            // Evento I/O que fuerza impresi�n inmediata.
+uint32_t delay;                                 // Delay
 
 // Variables de estado de los botones principales
-bool Enc_Apg_push = FALSE;     // Pulsacion del botón ON/OFF
-bool Menu_Push = FALSE;        // Pulsacion del boton Menu
-bool UP_DOWN_Push = FALSE;     // Pulsacion del boton UP/DOWN
-
-bool FAN_LED_State = 0;                                     // Estado led_FAN.
-const char* SysSTR[] = {"Cool","Off","Heat","Only Fan"};    // Control de los estados.
-
+bool Enc_Apg_push = FALSE;                      // Pulsacion del boton ON/OFF
+bool Menu_Push = FALSE;                         // Pulsacion del boton Menu
+bool UP_DOWN_Push = FALSE;                      // Pulsacion del boton UP/DOWN
 
 
 /* **** SE DECLARARON LAS VARIABLES Y FUNCIONES PARA REALIZAR EL DALAY CON EL TIMER ******** */
-extern void Timer32_INT1 (void); // Funci�n de interrupci�n.
-extern void Delay_ms (uint32_t time); // Funci�n de delay.
-uint32_t tiempo = 2000;
+extern void Timer32_INT1 (void);                // Funcion de interrupcion.
+extern void Delay_ms (uint32_t time);           // Funcion de delay.
 float lum[3];
+
 /*FUNCTION******************************************************************************
 *
 * Function Name    : System_InicialiceTIMER
@@ -53,8 +45,7 @@ void System_InicialiceTIMER (void)
 * Returned Value   : None.
 * Comments         :
 *    Inicializa las configuraciones deseadas para
-*    el m�dulo general ADC y dos de sus canales; uno para la temperatura, otro para
-*    el heartbeat.
+*    el modulo general ADC y los tres canales a utilizar
 *
 *END***********************************************************************************/
 void HVAC_InicialiceADC(void)
@@ -62,12 +53,11 @@ void HVAC_InicialiceADC(void)
     // Iniciando ADC y canales.
     ADC_Initialize(ADC_14bitResolution, ADC_CLKDiv8);
     ADC_SetConvertionMode(ADC_SequenceOfChannels);
-    ADC_EnableTemperatureSensor(TEMP_CH);                          // Se configura el sensor en el canal 0.
-    ADC_ConfigurePinChannel(LUM1, AN8, ADC_VCC_VSS); /*pin 4.5. se enlaza el canal a la entrada analoga de la tarjeta para realizar la lectura*/
-    ADC_ConfigurePinChannel(LUM2, AN9, ADC_VCC_VSS); /*pin 4.4.*/
-    ADC_ConfigurePinChannel(LUM3, AN10, ADC_VCC_VSS); /*Pin 4.3*/
-    ADC_SetStartOfSequenceChannel(AN8); /*Empieza la secuencia de lectura en el analogo 8*/
-    ADC_SetEndOfSequenceChannel(AN10); /*Termina la secuencia de lectura en el analogo 10*/
+    ADC_ConfigurePinChannel(LUM1, AN8, ADC_VCC_VSS);            /*pin 4.5. se enlaza el canal a la entrada analoga de la tarjeta para realizar la lectura*/
+    ADC_ConfigurePinChannel(LUM2, AN9, ADC_VCC_VSS);            /*pin 4.4.*/
+    ADC_ConfigurePinChannel(LUM3, AN10, ADC_VCC_VSS);           /*Pin 4.3*/
+    ADC_SetStartOfSequenceChannel(AN8);                         /*Empieza la secuencia de lectura en el analogo 8*/
+    ADC_SetEndOfSequenceChannel(AN10);                          /*Termina la secuencia de lectura en el analogo 10*/
 }
 
 /*FUNCTION******************************************************************************
@@ -76,7 +66,7 @@ void HVAC_InicialiceADC(void)
 * Returned Value   : None.
 * Comments         :
 *    Inicializa las configuraciones deseadas para
-*    configurar el modulo UART (comunicaci�n as�ncrona).
+*    configurar el modulo UART (comunicacion asincrona).
 *
 *END***********************************************************************************/
 void HVAC_InicialiceUART (void)
@@ -135,17 +125,17 @@ void HVAC_InicialiceIO(void)
  **********************************************************************************/
 void INT_SWI(void)
 {
-    GPIO_clear_interrupt_flag(P1,B1); // Limpia la bandera de la interrupci�n.
-    GPIO_clear_interrupt_flag(P1,B4); // Limpia la bandera de la interrupci�n.
+    GPIO_clear_interrupt_flag(P1,B1);                           // Limpia la bandera de la interrupcion.
+    GPIO_clear_interrupt_flag(P1,B4);                           // Limpia la bandera de la interrupcion.
 
-    if(!GPIO_getInputPinValue(ON_OFF_PORT,BIT(ON_OFF)))     // Si se pulsa el botón de encendido y apagado.
+    if(!GPIO_getInputPinValue(ON_OFF_PORT,BIT(ON_OFF)))         // Si se pulsa el boton de encendido y apagado.
         HVAC_Enc_Apg_Ctrl();
-    if(!GPIO_getInputPinValue(MENU_PORT,BIT(MENU_BTN))){    // Si se pulsa el botón de menu.
-        Select_Menu += 0x01;        // Cambia la seleccion
-        if(Select_Menu > 0x03)      // Reinicia la seleccion cuando se pasa de 3
+    if(!GPIO_getInputPinValue(MENU_PORT,BIT(MENU_BTN))){        // Si se pulsa el boton de menu.
+        Select_Menu += 0x01;                                    // Cambia la seleccion
+        if(Select_Menu > 0x03)                                  // Reinicia la seleccion cuando se pasa de 3
             Select_Menu = 0x01;
         while(!GPIO_getInputPinValue(MENU_PORT,BIT(MENU_BTN))); //Para evitar el rebote
-        HVAC_Menu();                // Imprime el menu
+        HVAC_Menu();                                            // Imprime el menu
     }
     return;
 }
@@ -159,10 +149,12 @@ void INT_SWI(void)
  **********************************************************************************/
 void INT_UP_DOWN(void)
 {
-    GPIO_clear_interrupt_flag(P2,B4); // Limpia la bandera de la interrupci�n.
-    GPIO_clear_interrupt_flag(P2,B5); // Limpia la bandera de la interrupci�n.
-    if(Enc_Apg != APAGADO){     //No imprime si el sistema está apagado
-        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(UP_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){     // Si se pulsa el botón UP
+    GPIO_clear_interrupt_flag(P2,B4);                       // Limpia la bandera de la interrupcion.
+    GPIO_clear_interrupt_flag(P2,B5);                       // Limpia la bandera de la interrupcion.
+    if(Enc_Apg != APAGADO){                                 //No imprime si el sistema esta apagado
+
+        // Si se pulsa el boton UP
+        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(UP_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){
             switch(Select_Menu){
                 case P1_SELECTED:  Persiana1.Estado = Up; break;
                 case P2_SELECTED:  Persiana2.Estado = Up; break;
@@ -170,7 +162,9 @@ void INT_UP_DOWN(void)
                 case DEFAULT: UART_putsf(MAIN_UART,"\n\r Selecciona una opcion con el boton MENU \n\r");
             }
         }
-        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(DOWN_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){    // Si se pulsa el boton DOWN
+
+        // Si se pulsa el boton DOWN
+        if(GPIO_getInputPinValue(UP_DOWN_PORT,BIT(DOWN_BTN)) != NORMAL_STATE_EXTRA_BUTTONS){
             switch(Select_Menu){
                 case P1_SELECTED:  Persiana1.Estado = Down; break;
                 case P2_SELECTED:  Persiana2.Estado = Down; break;
@@ -194,8 +188,9 @@ void INT_UP_DOWN(void)
 *END***********************************************************************************/
 void HVAC_ActualizarEntradas(void)
 {
-    //Lectura de los potenciometros, va del 0 a 10 luxes
-    //Se usa la formula Vmax/2^n donde se multiplica por 10
+    //Lectura de los potenciometros
+    //Se mapean los valores dados por el ADC para entregar valores de 0 a 10 luxes
+    //La formula usada es: (valor del ADC/Valor maximo del ADC) * valor maximo deseado
     ADC_trigger();
     while(ADC_is_busy());
     lum[0] = (ADC_result(LUM1) * 10) / MAX_ADC_VALUE;
@@ -238,12 +233,15 @@ void HVAC_PrintState(void)
 
         iterations = 0;
 
-        if(SecuenciaLED.Estado == Up){      //Si se activa la secuencia...
-            toggle ^= 1;                    //Intercambia entre LED Rojo y Azul
+        //Si se activa la secuencia...
+        if(SecuenciaLED.Estado == Up){
+            //Intercambia entre LED Rojo y Azul
+            toggle ^= 1;
             GPIO_setOutput(LED_RGB_PORT, LED_Rojo, toggle);
             GPIO_setOutput(LED_RGB_PORT, LED_Azul, !toggle);
         }
-        else{                               //Si no se activa o se desactiva permanece apagado
+        //Si no se activa o se desactiva permanece apagado
+        else{
             GPIO_setOutput(LED_RGB_PORT, LED_Rojo, 0);
             GPIO_setOutput(LED_RGB_PORT, LED_Azul, 0);
         }
@@ -256,27 +254,36 @@ void HVAC_PrintState(void)
 *
 * Function Name    : HVAC_Enc_Apg_Check
 * Returned Value   : None.
-* Comments         : Verifica el estado de la pulsacion del botón ON/OFF y controla
+* Comments         : Verifica el estado de la pulsacion del boton ON/OFF y controla
 *                    el delay para el encendido y apagado del programa.
-*                    También controla el delay del menu
+*                    Tambien controla el delay del menu
 *
 *END***********************************************************************************/
 void HVAC_Enc_Apg_Check(void)
 {
-    if (Enc_Apg_push == TRUE || Menu_Push == TRUE){ // Al pulsar el botón ON/OFF o el boton de menu...
-        if(contadorApg == 0x00)      // Si se pulsó el botón para encender...
-            Delay_ms(1000);             // Espera un segundo
-        else if(contadorApg > 0x00)  // Si se pulsó el botón para apagar...
-            Delay_ms(5000);             // Espera 5 segundos
+    // Al pulsar el boton ON/OFF o el boton de menu...
+    if (Enc_Apg_push == TRUE || Menu_Push == TRUE){
+
+        // Si se pulsa el boton para encender...
+        if(contadorApg == 0x00)
+            Delay_ms(1000);                             // Espera 1 segundo
+
+        // Si se pulsa el boton para apagar...
+        else if(contadorApg > 0x00)
+            Delay_ms(5000);                             // Espera 5 segundos
     }
     else if(UP_DOWN_Push == TRUE){
-        if(Select_Menu != DEFAULT && Select_Menu != 0x03){   //Si no hay seleccion o está seleccionado SL no hay espera
+
+        //Si no hay seleccion o esta seleccionado SL no hay espera
+        if(Select_Menu != DEFAULT && Select_Menu != 0x03){
             UART_putsf(MAIN_UART,"\n\rEspere 5 segundos... ");
             Delay_ms(4000);
         }
+
         Delay_ms(1000);
         HVAC_Menu();
     }
+
     UP_DOWN_Push = FALSE;
     Menu_Push = FALSE;
     Enc_Apg_push = FALSE;
@@ -291,20 +298,27 @@ void HVAC_Enc_Apg_Check(void)
 *END***********************************************************************************/
 void HVAC_Enc_Apg_Ctrl(void)
 {
-    if(Enc_Apg == APAGADO){     //Si se pulsa el botón con el sistema apagado...
-        Enc_Apg = ENCENDIDO;    //Se enciende el sistema
-        UART_putsf(MAIN_UART,"SISTEMA ENCENDIDO\n\r"); //Se informa al usuario
-        GPIO_setOutput(BSP_LED1_PORT,  BSP_LED1,  1); //Enciende el LED rojo
+    //Si se pulsa el boton con el sistema apagado...
+    if(Enc_Apg == APAGADO){
+        Enc_Apg = ENCENDIDO;                                //Se enciende el sistema
+        UART_putsf(MAIN_UART,"SISTEMA ENCENDIDO\n\r");      //Se informa al usuario
+        GPIO_setOutput(BSP_LED1_PORT,  BSP_LED1,  1);       //Enciende el LED rojo
     }
-    else if (Enc_Apg == ENCENDIDO){     //Si se pulsa el botón con el sistema encendido...
-        contadorApg = contadorApg + 1;  //Aumenta el contador de apagado
-        if(contadorApg == 0x02){    //Si se pulsa dos veces el botón de apagado...
-            Enc_Apg = APAGADO;      //Se apaga el sistema
-            UART_putsf(MAIN_UART,"SISTEMA APAGADO\n\r"); //Se informa al usuario
-            GPIO_setOutput(BSP_LED1_PORT,  BSP_LED1,  0); //Apaga el LED rojo
+
+    //Si se pulsa el boton con el sistema encendido...
+    else if (Enc_Apg == ENCENDIDO){
+        contadorApg = contadorApg + 1;                      //Aumenta el contador de apagado
+
+        //Si se pulsa dos veces el boton de apagado...
+        if(contadorApg == 0x02){
+            Enc_Apg = APAGADO;                              //Se apaga el sistema
+            UART_putsf(MAIN_UART,"SISTEMA APAGADO\n\r");    //Se informa al usuario
+            GPIO_setOutput(BSP_LED1_PORT,  BSP_LED1,  0);   //Apaga el LED rojo
         }
-        else if(contadorApg < 0x02){ //Si se pulsa menos de dos veces el botón de apagado...
-            UART_putsf(MAIN_UART,"Para apagar vuelva a presionar el botón\n\r"); //Imprime instrucciones
+
+        //Si se pulsa menos de dos veces el boton de apagado...
+        else if(contadorApg < 0x02){
+            UART_putsf(MAIN_UART,"Para apagar vuelva a presionar el boton\n\r");    //Imprime instrucciones
         }
     }
     Enc_Apg_push = TRUE;   //Controla los segundos de "delay" de cada estado (ON/OFF)
@@ -318,7 +332,9 @@ void HVAC_Enc_Apg_Ctrl(void)
 *
 *END***********************************************************************************/
 void HVAC_Menu(void){
-    if(Enc_Apg != APAGADO){     //No imprime si el sistema está apagado
+
+    //No imprime si el sistema esta apagado
+    if(Enc_Apg != APAGADO){
         switch(Select_Menu){
             case P1_SELECTED:  sprintf(state, "\n\rP1_SELECTED  STATUS: %s\n\r\n\r"
                                ,(Persiana1.Estado == Up? "UP":"DOWN"));
